@@ -1,0 +1,1 @@
+!function(a){a(document).ready(function(){a(".navbar-burger").click(function(){a(".navbar-burger").toggleClass("is-active"),a(".navbar-menu").toggleClass("is-active")})})}(jQuery);
