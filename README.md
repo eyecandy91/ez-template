@@ -1,7 +1,7 @@
 
 **Ez**
 =
-##Contributors: Henry puttick
+**Contributors: Henry puttick**
 
 Requires at least: 4.0
 
@@ -13,16 +13,20 @@ License: GPLv2 or later
 
 License URI: http://www.gnu.org/licenses/gpl-2.0.html
 
-##Description
+**Description**
 =
 Ez Media's starter kit development tmplate for all projects
 
-##Changelog
+**Changelog**
 =
+1.1
+* Dynamic admin function for google analytics 
+1.0
+* Essiental additons for backend
 0.5
 * Hello world
 
-##Resources
+**Resources**
 =
 * NPM
 * GULP

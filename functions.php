@@ -120,17 +120,53 @@ add_action( 'widgets_init', '_ez_widgets_init' );
  * Enqueue scripts and styles.
  */
 function _ez_scripts() {
-	wp_enqueue_style( '_s-style', get_stylesheet_uri() );
+	// wp_enqueue_style( '_s-style', get_stylesheet_uri() );
 
-	wp_enqueue_script( '_s-navigation', get_template_directory_uri() . '/js/navigation.js', array(), '20151215', true );
+	// wp_enqueue_script( '_s-navigation', get_template_directory_uri() . '/js/navigation.js', array(), '20151215', true );
 
-	wp_enqueue_script( '_s-skip-link-focus-fix', get_template_directory_uri() . '/js/skip-link-focus-fix.js', array(), '20151215', true );
+	// wp_enqueue_script( '_s-skip-link-focus-fix', get_template_directory_uri() . '/js/skip-link-focus-fix.js', array(), '20151215', true );
 
-	if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
-		wp_enqueue_script( 'comment-reply' );
-	}
+	// if ( is_singular() && comments_open() && get_option( 'thread_comments' ) ) {
+	// 	wp_enqueue_script( 'comment-reply' );
+	// }
+	wp_enqueue_script( 'scripts', get_template_directory_uri() . '/js/scripts.js', array(), null, true );
+
+	wp_enqueue_script('jquery', get_template_directory_uri() . '/js/jquery-2.2.4.min.js', array(), null, true);
 }
 add_action( 'wp_enqueue_scripts', '_ez_scripts' );
+
+/**
+ * Enqueue ajax correctly
+ */
+function add_ajax_script() {
+    wp_localize_script( 'ajax-js', 'ajax_params', array( 'ajax_url' => admin_url( 'admin-ajax.php' ) ) );
+}
+add_action( 'wp_enqueue_scripts', 'add_ajax_script' );
+
+function mytheme_customize_register( $wp_customize ) {
+    //All our sections, settings, and controls will be added here
+
+    $wp_customize->add_section( 'my_site_logo' , array(
+        'title'      => __( 'My Site Logo', 'mytheme' ),
+        'priority'   => 30,
+    ) );
+
+    $wp_customize->add_control(
+        new WP_Customize_Image_Control(
+            $wp_customize,
+            'logo',
+            array(
+               'label'      => __( 'Upload a logo', 'theme_name' ),
+               'section'    => 'my_site_logo',
+               'settings'   => 'my_site_logo_id' 
+            )
+        )
+    );
+
+}
+add_action( 'customize_register', 'mytheme_customize_register' );
+
+//get_theme_mod( 'my_site_logo_id' );
 
 /**
  * Implement the Custom Header feature.
@@ -165,6 +201,60 @@ if ( defined( 'JETPACK__VERSION' ) ) {
 if ( class_exists( 'WooCommerce' ) ) {
 	require get_template_directory() . '/inc/woocommerce.php';
 }
+
+/**
+ * Remove all the BS trash
+ */
+remove_action('wp_head', 'rsd_link'); // remove really simple discovery link
+remove_action('wp_head', 'wp_generator'); // remove wordpress version
+remove_action('wp_head', 'feed_links', 2); // remove rss feed links (make sure you add them in yourself if youre using feedblitz or an rss service)
+remove_action('wp_head', 'feed_links_extra', 3); // removes all extra rss feed links
+remove_action('wp_head', 'index_rel_link'); // remove link to index page
+remove_action('wp_head', 'wlwmanifest_link'); // remove wlwmanifest.xml (needed to support windows live writer)
+remove_action('wp_head', 'start_post_rel_link', 10, 0); // remove random post link
+remove_action('wp_head', 'parent_post_rel_link', 10, 0); // remove parent post link
+remove_action('wp_head', 'adjacent_posts_rel_link', 10, 0); // remove the next and previous post links
+remove_action('wp_head', 'adjacent_posts_rel_link_wp_head', 10, 0 );
+      
+remove_action( 'wp_head', 'print_emoji_detection_script', 7 );
+remove_action( 'wp_print_styles', 'print_emoji_styles' );
+      
+remove_action('wp_head', 'wp_shortlink_wp_head', 10, 0); // Remove shortlink
+remove_action('welcome_panel', 'wp_welcome_panel'); // Remove welcome BS
+
+add_filter('xmlrpc_enabled', '__return_false');
+
+add_theme_support( 'title-tag' ); // Utilize Proper WordPress Titles
+
+/**
+ * Add ACF to backend
+ */
+// 1. customize ACF path
+add_filter('acf/settings/path', 'my_acf_settings_path');
+function my_acf_settings_path($path)
+{
+
+	// update path
+	$path = get_stylesheet_directory() . '/acf/';
+
+	// return
+	return $path;
+}
+// 2. customize ACF dir
+add_filter('acf/settings/dir', 'my_acf_settings_dir');
+function my_acf_settings_dir($dir)
+{
+
+	// update path
+	$dir = get_stylesheet_directory_uri() . '/acf/';
+
+	// return
+	return $dir;
+}
+// 3. Hide ACF field group menu item
+add_filter('acf/settings/show_admin', '__return_true');
+// 4. Include ACF
+include_once(get_stylesheet_directory() . '/acf/acf.php');
 
 /**
  * Changes reset password to more uniform text
@@ -297,7 +387,39 @@ function remove_admin_bar() {
 }
 add_action('after_setup_theme', 'remove_admin_bar');
 
-add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
+/**
+ * Adds custom taxonomy custom post types
+ */
+function add_cats_to_page()
+{
+	// Add tag metabox to page
+	register_taxonomy_for_object_type('post_tag', 'ADD_NEW_TAXONOMY');
+	// Add category metabox to ADD_NEW_TAXONOMY
+	register_taxonomy_for_object_type('category', 'ADD_NEW_TAXONOMY');
+	register_taxonomy_for_object_type('category', 'page');  
+}
+add_action('init', 'add_cats_to_page');
+
+/**
+ * Remove the standard posts from admin 
+ */
+function remove_menu () 
+{
+   remove_menu_page('edit.php');
+} 
+add_action('admin_menu', 'remove_menu');
+
+/**
+ * Add subscribers to post authors
+ */
+add_filter( 'wp_dropdown_users_args', 'add_subscribers_to_dropdown', 10, 2 );
+function add_subscribers_to_dropdown( $query_args, $r ) {
+
+    $query_args['who'] = '';
+    return $query_args;
+
+}
+
 
 /**
 	 * Create A Simple Theme Options Panel
@@ -480,6 +602,12 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
 					} else {
 						unset( $options['email_link'] ); // Remove from options if empty
 					}
+					// Input
+					if ( ! empty( $options['ga'] ) ) {
+						$options['ga'] = sanitize_text_field( $options['ga'] );
+					} else {
+						unset( $options['ga'] ); // Remove from options if empty
+					}
 	
 					// // Select
 					// if ( ! empty( $options['select_example'] ) ) {
@@ -502,7 +630,7 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
 
 <div class="wrap">
 
-    <h1><?php esc_html_e( 'OIl baron settings', 'ez' ); ?></h1>
+    <h1><?php esc_html_e( 'Theme settings', 'ez' ); ?></h1>
 
     <form method="post" action="options.php">
 
@@ -606,7 +734,7 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
 			</tr>
             <?php // telephone number ?>
             <tr valign="top">
-                <th scope="row"><?php esc_html_e( 'How many certificates to be shown on one page', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'How many custom-post to be shown on one page', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'pagination' ); ?>
                     <input type="text" name="theme_options[pagination]" value="<?php echo esc_attr( $value ); ?>">
@@ -614,11 +742,11 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
             </tr>
 
 			<tr valign="top">
-				<th scope="row"><h2><?php esc_html_e( 'Login settings (If using custom login pages/forms)', 'ez' ); ?></h2></th>
+				<th scope="row"><h2><?php esc_html_e( 'Login settings ', 'ez' ); ?></h2></th>
 			</tr>
             <?php // telephone number ?>
             <tr valign="top">
-                <th scope="row"><?php esc_html_e( 'If user name or/and password doesnt match error header', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'If user name or/and password doesnt match error header (If using custom login pages/forms)', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'login_error' ); ?>
                     <input type="text" name="theme_options[login_error]" value="<?php echo esc_attr( $value ); ?>">
@@ -626,7 +754,7 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
             </tr>
 
             <tr valign="top">
-                <th scope="row"><?php esc_html_e( 'If user name or/and password doesnt match error message', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'If user name or/and password doesnt match error message (If using custom login pages/forms)', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'login_error_text' ); ?>
 					<textarea type="text" name="theme_options[login_error_text]" cols="50"
@@ -635,10 +763,21 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
 			</tr>
 
 			<tr valign="top">
-				<th scope="row"><h2><?php esc_html_e( 'User registration email settings (If using custom email plugin)', 'ez' ); ?></h2></th>
+				<th scope="row"><h2><?php esc_html_e( 'Google analytics', 'ez' ); ?></h2></th>
 			</tr>
 			<tr valign="top">
-                <th scope="row"><?php esc_html_e( 'Email header ', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'UA Number (If using analytics)', 'ez' ); ?></th>
+                <td>
+                    <?php $value = self::get_theme_option( 'ga' ); ?>
+					<input type="text" name="theme_options[ga]" value="<?php echo esc_attr( $value ); ?>">
+                </td>
+            </tr>
+
+			<tr valign="top">
+				<th scope="row"><h2><?php esc_html_e( 'User registration email settings', 'ez' ); ?></h2></th>
+			</tr>
+			<tr valign="top">
+                <th scope="row"><?php esc_html_e( 'Email header (If using custom email plugin)', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'email_header' ); ?>
 					<textarea type="text" name="theme_options[email_header]" cols="50"
@@ -647,7 +786,7 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
             </tr>
 
 			<tr valign="top">
-                <th scope="row"><?php esc_html_e( 'Email message', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'Email message (If using custom email plugin)', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'email_body' ); ?>
 					<textarea type="text" name="theme_options[email_body]" cols="50"
@@ -656,7 +795,7 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
             </tr>
 
 			<tr valign="top">
-                <th scope="row"><?php esc_html_e( 'Email link message', 'ez' ); ?></th>
+                <th scope="row"><?php esc_html_e( 'Email link message (If using custom email plugin)', 'ez' ); ?></th>
                 <td>
                     <?php $value = self::get_theme_option( 'email_link' ); ?>
 					<input type="text" name="theme_options[email_link]" value="<?php echo esc_attr( $value ); ?>">
@@ -701,3 +840,217 @@ add_filter( 'wp_mime_type_icon', 'acf_change_icon_on_files', 10, 3 );
 	function myprefix_get_theme_option( $id = '' ) {
 		return WPEX_Theme_Options::get_theme_option( $id );
 	}
+
+/**
+ * Load custom post type 
+ */
+function custom_post()
+{
+
+	// Set UI labels for Custom Post Type
+	$labels = array(
+		'name'                => _x('Custom post type', 'Post Type General Name', 'ez'),
+		'singular_name'       => _x('Custom post type', 'Post Type Singular Name', 'ez'),
+		'menu_name'           => __('Custom post type', 'ez'),
+		'parent_item_colon'   => __('Parent Custom post type', 'ez'),
+		'all_items'           => __('All Custom post type', 'ez'),
+		'view_item'           => __('View Custom post type', 'ez'),
+		'add_new_item'        => __('Add New Custom post type', 'ez'),
+		'add_new'             => __('Add New Custom post type', 'ez'),
+		'edit_item'           => __('Edit Custom post type', 'ez'),
+		'update_item'         => __('Update Custom post type', 'ez'),
+		'search_items'        => __('Search Custom post type', 'ez'),
+		'not_found'           => __('Not Found', 'ez'),
+		'not_found_in_trash'  => __('Not found in Trash', 'ez'),
+	);
+
+	// Set other options for Custom Post Type
+
+	$args = array(
+		'label'               => __('Custom post type', 'ez'),
+		'description'         => __('Custom post type', 'ez'),
+		'labels'              => $labels,
+		// Features this CPT supports in Post Editor
+		'supports'            => array('title', 'author'),
+		// You can associate this CPT with a taxonomy or custom taxonomy.
+		'taxonomies'          => array('custom taxtonomy'),
+		/* A hierarchical CPT is like Pages and can have
+			* Parent and child items. A non-hierarchical CPT
+			* is like Posts.
+			*/
+		'hierarchical'        => false,
+		// 'taxonomies'            => array('category'),
+		'public'              => true,
+		'show_ui'             => true,
+		'show_in_menu'        => true,
+		'show_in_nav_menus'   => true,
+		'show_in_admin_bar'   => true,
+		'menu_position'       => 10,
+		'can_export'          => true,
+		'has_archive'         => true,
+		'exclude_from_search' => true, // Change if weird things atrt to happen
+		'capability_type'     => 'page',
+		'menu_icon'           => 'dashicons-awards',
+		'publicly_queryable'  => false, // Set to false hides Single Pages
+	);
+
+	// Registering your Custom Post Type
+	register_post_type('custom-post', $args); // change to match that of the real name 
+}
+
+/* Hook into the 'init' action so that the function
+	* Containing our post type registration is not
+	* unnecessarily executed.
+	*/
+
+add_action('init', 'custom_post', 0);
+
+/**
+ * Add custom taxonomy
+ */
+//hook into the init action and call create_book_taxonomies when it fires
+add_action('init', 'custom_taxonomy', 0);
+function custom_taxonomy()
+{
+
+	// Add new taxonomy, make it hierarchical like categories
+	//first do the translations part for GUI
+
+	$labels = array(
+		'name' => _x('custom taxtonomy', 'taxonomy general name'),
+		'singular_name' => _x('custom taxtonomy', 'taxonomy singular name'),
+		'search_items' =>  __('Search custom taxtonomy'),
+		'all_items' => __('All custom taxtonomy'),
+		'parent_item' => __('Parent custom taxtonomy'),
+		'parent_item_colon' => __('Parent custom taxtonomy:'),
+		'edit_item' => __('Edit custom taxtonomy'),
+		'update_item' => __('Update custom taxtonomy'),
+		'add_new_item' => __('Add New custom taxtonomy'),
+		'new_item_name' => __('New custom taxtonomy Name'),
+		'menu_name' => __('custom taxtonomy'),
+	);
+
+	// Now register the taxonomy
+
+	register_taxonomy('custom-tax', array('custom-post'), array( // change to match that of the real name 
+		'hierarchical' => true,
+		'labels' => $labels,
+		'show_ui' => true,
+		'show_admin_column' => true,
+		'query_var' => true,
+		'rewrite' => array('slug' => 'custom-tax'),
+		'show_in_rest' => true
+	));
+}
+
+/**
+ * Remove search ability
+ */
+function fb_filter_query( $query, $error = true ) {
+	if ( is_search() ) {
+	$query->is_search = false;
+	$query->query_vars[s] = false;
+	$query->query[s] = false;
+
+	// to error
+	if ( $error == true )
+	$query->is_404 = true;
+	}
+}
+add_action( 'parse_query', 'fb_filter_query' );
+add_filter( 'get_search_form', create_function( '$a', "return null;" ) );
+
+/**
+ * Remove Default Image Links in WordPress
+ */
+function wpb_imagelink_setup() {
+    $image_set = get_option( 'image_default_link_type' );
+     
+    if ($image_set !== 'none') {
+        update_option('image_default_link_type', 'none');
+    }
+}
+add_action('admin_init', 'wpb_imagelink_setup', 10);
+
+/**
+ * Hide WordPress update nag to all but admins
+ */
+function hide_update_notice_to_all_but_admin() {
+    if ( !current_user_can( 'update_core' ) ) {
+        remove_action( 'admin_notices', 'update_nag', 3 );
+    }
+}
+add_action( 'admin_head', 'hide_update_notice_to_all_but_admin', 1 );
+
+
+/**
+ * Remove all dashboard widgets
+ */
+function remove_dashboard_widgets() {
+    global $wp_meta_boxes;
+    
+    unset( $wp_meta_boxes['dashboard']['side']['core']['dashboard_quick_press'] );
+    unset( $wp_meta_boxes['dashboard']['normal']['core']['dashboard_incoming_links'] );
+    unset( $wp_meta_boxes['dashboard']['normal']['core']['dashboard_right_now'] );
+    unset( $wp_meta_boxes['dashboard']['normal']['core']['dashboard_plugins'] );
+    unset( $wp_meta_boxes['dashboard']['normal']['core']['dashboard_recent_drafts'] );
+    unset( $wp_meta_boxes['dashboard']['normal']['core']['dashboard_recent_comments'] );
+    unset( $wp_meta_boxes['dashboard']['side']['core']['dashboard_primary'] );
+    unset( $wp_meta_boxes['dashboard']['side']['core']['dashboard_secondary'] );
+
+    remove_meta_box( 'dashboard_activity', 'dashboard', 'normal' );
+}
+add_action( 'wp_dashboard_setup', 'remove_dashboard_widgets' );
+
+/**
+ * Example new widget
+ */
+function my_custom_dashboard_widgets() {
+	global $wp_meta_boxes;
+	
+	wp_add_dashboard_widget('custom_help_widget', 'Theme Support', 'custom_dashboard_help');
+}
+add_action('wp_dashboard_setup', 'my_custom_dashboard_widgets');
+ 
+function custom_dashboard_help() {
+echo '<p>Welcome to Custom Blog Theme! Need help? Contact the developer <a href="mailto:yourusername@gmail.com">here</a>. For WordPress Tutorials visit: <a href="https://www.wpbeginner.com" target="_blank">WPBeginner</a></p>';
+}
+
+/**
+ * Modify admin footer text
+ */
+function modify_footer() {
+    echo 'Created by <a href="mailto:info@ez.media">EZ MEDIA</a>.';
+}
+add_filter( 'admin_footer_text', 'modify_footer' );
+
+/**
+ * Add recent posts and edit link to dashboard ---- currently a test
+ */
+function wps_recent_posts_dw() {
+	?>
+	<ul>
+<?php $the_query = new WP_Query( 'posts_per_page=5' ); ?>
+ 
+<?php while ($the_query -> have_posts()) : $the_query -> the_post(); ?>
+ 
+<li><a href="<?php the_permalink() ?>"><?php the_title(); ?></a> <?php  edit_post_link(__('Edit')); ?></li>
+ 
+<?php 
+endwhile;
+wp_reset_postdata();
+?>
+</ul>
+<?php
+	
+	}
+	 
+	function add_wps_recent_posts_dw() {
+		   wp_add_dashboard_widget( 'wps_recent_posts_dw', __( 'Recent Posts' ), 'wps_recent_posts_dw' );
+	}
+	add_action('wp_dashboard_setup', 'add_wps_recent_posts_dw' );
+
+
+ /**
+ * remove 
+ */
