@@ -98,6 +98,21 @@ function _ez_content_width() {
 }
 add_action( 'after_setup_theme', '_ez_content_width', 0 );
 
+/* 
+   Debug preview with custom fields 
+*/ 
+
+add_filter('_wp_post_revision_fields', 'add_field_debug_preview');
+function add_field_debug_preview($fields){
+   $fields["debug_preview"] = "debug_preview";
+   return $fields;
+}
+
+add_action( 'edit_form_after_title', 'add_input_debug_preview' );
+function add_input_debug_preview() {
+   echo '<input type="hidden" name="debug_preview" value="debug_preview">';
+}
+
 /**
  * Register widget area.
  *

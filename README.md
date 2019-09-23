@@ -19,10 +19,15 @@ Ez Media's starter kit development tmplate for all projects
 
 **Changelog**
 =
+1.2
+* Added function script to enable ACF preview mode  
+
 1.1
 * Dynamic admin function for google analytics 
+
 1.0
 * Essiental additons for backend
+
 0.5
 * Hello world
 
