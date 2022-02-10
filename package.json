@@ -18,7 +18,7 @@
     "gulp-purifycss": "^0.2.0",
     "gulp-sass": "^3.1.0",
     "gulp-uglify": "^3.0.0",
-    "node-sass": "^4.11.0",
+    "node-sass": "^7.0.0",
     "purgecss-with-wordpress": "^1.0.0"
   },
   "dependencies": {
